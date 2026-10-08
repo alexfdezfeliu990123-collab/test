@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dados</title>
+<style>
+  :root {
+    --bg: #14352b;
+    --felt: #1c4a3b;
+    --die: #f6f1e4;
+    --pip: #1b1b1b;
+    --accent: #e3b341;
+    --text: #f3efe2;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    display: flex;
+    flex-direction: column;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  header { padding: 18px 16px 8px; text-align: center; }
+  .choices { display: inline-flex; gap: 8px; }
+  .choices button {
+    font: inherit; font-size: 1rem;
+    min-width: 76px; padding: 10px 14px;
+    border-radius: 999px;
+    border: 2px solid var(--accent);
+    background: transparent; color: var(--text);
+    cursor: pointer;
+  }
+  .choices button[aria-pressed="true"] { background: var(--accent); color: #1b1b1b; font-weight: bold; }
+  .choices button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  main {
+    flex: 1; margin: 8px 12px 12px;
+    background: var(--felt);
+    border-radius: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 22px; cursor: pointer;
+    box-shadow: inset 0 0 40px rgba(0,0,0,.35);
+    position: relative;
+  }
+  .dice { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; padding: 0 12px; }
+  .die {
+    width: 96px; height: 96px;
+    background: var(--die);
+    border-radius: 18px;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 12px;
+    box-shadow: 0 6px 0 #cfc7b0, 0 12px 18px rgba(0,0,0,.4);
+  }
+  .die.roll { animation: tumble .5s ease-out; }
+  @keyframes tumble {
+    0% { transform: rotate(0) scale(.85); }
+    60% { transform: rotate(300deg) scale(1.08); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+  .pip { width: 17px; height: 17px; border-radius: 50%; background: var(--pip); place-self: center; visibility: hidden; }
+  .pip.on { visibility: visible; }
+  .total { font-size: 2rem; min-height: 2.4rem; }
+  .hint { position: absolute; bottom: 14px; font-size: .95rem; opacity: .7; }
+  @media (prefers-reduced-motion: reduce) { .die.roll { animation: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <div class="choices" role="group" aria-label="Cantidad de dados">
+      <button data-n="1" aria-pressed="false">1 dado</button>
+      <button data-n="2" aria-pressed="true">2 dados</button>
+      <button data-n="3" aria-pressed="false">3 dados</button>
+      <button data-n="4" aria-pressed="false">4 dados</button>
+    </div>
+  </header>
+
+  <main id="table" role="button" tabindex="0" aria-label="Toca para lanzar los dados">
+    <div class="dice" id="dice" aria-live="polite"></div>
+    <div class="total" id="total"></div>
+    <div class="hint">Toca la pantalla para lanzar</div>
+  </main>
+
+<script>
+  // Posiciones de los puntos (1-9) en la cuadrícula 3x3 para cada cara
+  const PIPS = {
+    1: [5],
+    2: [1, 9],
+    3: [1, 5, 9],
+    4: [1, 3, 7, 9],
+    5: [1, 3, 5, 7, 9],
+    6: [1, 3, 4, 6, 7, 9]
+  };
+
+  let count = 2;
+  const diceEl = document.getElementById('dice');
+  const totalEl = document.getElementById('total');
+  const table = document.getElementById('table');
+
+  function dieHTML(value) {
+    let pips = '';
+    for (let i = 1; i <= 9; i++) {
+      pips += `<span class="pip${PIPS[value].includes(i) ? ' on' : ''}"></span>`;
+    }
+    return `<div class="die" role="img" aria-label="Dado: ${value}">${pips}</div>`;
+  }
+
+  function roll() {
+    const values = Array.from({ length: count }, () => Math.floor(Math.random() * 6) + 1);
+    diceEl.innerHTML = values.map(dieHTML).join('');
+    diceEl.querySelectorAll('.die').forEach(d => d.classList.add('roll'));
+    totalEl.textContent = count > 1 ? 'Total: ' + values.reduce((a, b) => a + b, 0) : '';
+  }
+
+  document.querySelectorAll('.choices button').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      count = Number(btn.dataset.n);
+      document.querySelectorAll('.choices button')
+        .forEach(b => b.setAttribute('aria-pressed', b === btn));
+      roll();
+    });
+  });
+
+  table.addEventListener('click', roll);
+  table.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); roll(); }
+  });
+
+  roll();
+</script>
+</body>
+</html>
